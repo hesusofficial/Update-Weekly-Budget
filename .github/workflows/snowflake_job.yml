@@ -1,11 +1,9 @@
 name: Sync Budget Data to Google Sheet
 
 on:
-  # Manual trigger
   workflow_dispatch:
-  # Scheduled run – daily at 02:00 UTC (adjust if you like)
   schedule:
-    - cron: "0 2 * * *"
+    - cron: "0 2 * * *"   # runs daily at 2AM UTC
 
 jobs:
   sync-budget-data:
@@ -23,11 +21,10 @@ jobs:
       # Google Sheets secrets
       GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
       GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
-      # (optional) GOOGLE_LOG_SHEET_ID: ${{ secrets.GOOGLE_LOG_SHEET_ID }}
 
     steps:
       - name: Checkout repo
-      - uses: actions/checkout@v4
+        uses: actions/checkout@v4   # ← FIXED
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -39,6 +36,5 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run sync script
-        run: |
-          python sync_budget_data.py
+      - name: Run Snowflake → Sheets Sync
+        run: python sync_budget_data.py
