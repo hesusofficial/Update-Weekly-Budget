@@ -13,13 +13,14 @@ from googleapiclient.discovery import build
 
 def compute_date_range() -> Tuple[date, date]:
     """
-    Rolling weekly window:
-      START = today (date of run)
-      END   = START + 75 days
+    Rolling window centered on today:
+      START = today - 75 days
+      END   = today + 75 days
     """
-    start_date = date.today()
-    end_date = start_date + timedelta(days=75)
-    print(f"DATE RANGE  →  {start_date}  →  {end_date} (75-day rolling window)")
+    today = date.today()
+    start_date = today - timedelta(days=75)
+    end_date = today + timedelta(days=75)
+    print(f"DATE RANGE  →  {start_date}  →  {end_date} (±75 days around today)")
     return start_date, end_date
 
 
@@ -229,7 +230,7 @@ def log_run(start_date: date, end_date: date, row_count: int, tab_name: str = "L
 # ---------- MAIN ----------
 
 def main():
-    # 1. Compute rolling window
+    # 1. Compute rolling window (±75 days)
     start_date, end_date = compute_date_range()
 
     # 2. Fetch data from Snowflake
