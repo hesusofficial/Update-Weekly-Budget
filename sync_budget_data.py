@@ -1,6 +1,7 @@
 import os
 import json
 from typing import List, Any
+from decimal import Decimal
 
 import snowflake.connector
 from google.oauth2 import service_account
@@ -44,10 +45,32 @@ ORDER BY wiba.WORK_ITEM_ID ASC;
 """
 
 
+def _normalize_snowflake_account(raw: str) -> str:
+    """Clean up SNOWFLAKE_ACCOUNT if a full URL or whitespace was pasted."""
+    raw = raw.strip()
+
+    # Remove protocol if present
+    if raw.startswith("https://"):
+        raw = raw[len("https://"):]
+    elif raw.startswith("http://"):
+        raw = raw[len("http://"):]
+
+    # Remove full domain if present
+    if ".snowflakecomputing.com" in raw:
+        raw = raw.split(".snowflakecomputing.com")[0]
+
+    return raw
+
+
 def get_snowflake_connection():
     """Create a Snowflake connection from environment variables."""
+    raw_account = os.environ["SNOWFLAKE_ACCOUNT"]
+    account = _normalize_snowflake_account(raw_account)
+
+    print(f"Connecting to Snowflake account: {repr(account)}")
+
     conn = snowflake.connector.connect(
-        account=os.environ["SNOWFLAKE_ACCOUNT"],
+        account=account,
         user=os.environ["SNOWFLAKE_USER"],
         password=os.environ["SNOWFLAKE_PASSWORD"],
         warehouse=os.environ["SNOWFLAKE_WAREHOUSE"],
@@ -60,20 +83,22 @@ def get_snowflake_connection():
 def fetch_budget_data() -> (List[str], List[List[Any]]):
     """Run the Snowflake query and return headers + rows."""
     conn = get_snowflake_connection()
+    cursor = conn.cursor()
     try:
-        cursor = conn.cursor()
         cursor.execute(SNOWFLAKE_QUERY)
         rows = cursor.fetchall()
 
         # Column names from cursor.description
         headers = [col[0] for col in cursor.description]
 
-        # Convert all values to basic Python types / strings for Sheets
         def normalize(value):
             if value is None:
                 return ""
+            # Convert Decimal to float for Sheets / JSON
+            if isinstance(value, Decimal):
+                return float(value)
+            # dates / datetimes
             if hasattr(value, "isoformat"):
-                # dates / datetimes
                 return value.isoformat()
             return value
 
@@ -134,4 +159,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
